@@ -135,30 +135,70 @@ class KMedoids:
 # Main execution
 if __name__ == "__main__":
     # Load and prepare the dataset
-    file_path = "student_depression_dataset_pre3.csv.arff"
+    file_path = "student_Depression_dataset_pre.csv.arff"
     print(f"Loading dataset from {file_path}...")
     df = load_arff_data(file_path)
+    
+    # Preprocess the data
+    print("Preprocessing data...")
+    
+    # For Sleep Duration column, map values to numerical categories
+    if 'Sleep Duration' in df.columns:
+        sleep_duration_mapping = {
+            'Less than 5 hours': 0,
+            '5-6 hours': 1,
+            '7-8 hours': 2,
+            'More than 8 hours': 3,
+            'Others': 4
+        }
+        df['Sleep Duration'] = df['Sleep Duration'].map(sleep_duration_mapping)
+        print("Mapped Sleep Duration values to numerical categories")
+    else:
+        print("Warning: 'Sleep Duration' column not found in the dataset.")
+    
+    # For Dietary Habits column, map values to numerical categories
+    if 'Dietary Habits' in df.columns:
+        dietary_habits_mapping = {
+            'Unhealthy': 0,
+            'Moderate': 1,
+            'Healthy': 2,
+            'Others': 3
+        }
+        df['Dietary Habits'] = df['Dietary Habits'].map(dietary_habits_mapping)
+        print("Mapped Dietary Habits values to numerical categories")
+    else:
+        print("Warning: 'Dietary Habits' column not found in the dataset.")
 
     # Display basic dataset information
     print(f"Dataset shape: {df.shape}")
     print(f"Columns: {df.columns.tolist()}")
 
+    # Exclude 'Depression' column for clustering but keep it in the original dataframe
+    if 'Depression' in df.columns:
+        print("Excluding 'Depression' column from clustering features...")
+        X_features = df.drop(columns=['Depression'])
+    else:
+        print("Warning: 'Depression' column not found in the dataset.")
+        X_features = df.copy()
+
     # Randomly select 1000 samples from the dataset
-    sample_size = 1000
+    sample_size = 500
     if len(df) > sample_size:
         print(f"Randomly selecting {sample_size} samples from the dataset...")
         # Set random seed for reproducibility
         np.random.seed(42)
         sampled_indices = np.random.choice(len(df), sample_size, replace=False)
         df_sampled = df.iloc[sampled_indices].reset_index(drop=True)
+        # Also sample the features dataframe using the same indices
+        X_features_sampled = X_features.iloc[sampled_indices].reset_index(drop=True)
         print(f"Sampled dataset shape: {df_sampled.shape}")
     else:
         print(f"Dataset has fewer than {sample_size} samples. Using the entire dataset.")
         df_sampled = df
+        X_features_sampled = X_features
 
-    # Prepare the data for clustering
-    # Assuming all columns are numerical and no target column
-    X = df_sampled.values
+    # Prepare the data for clustering - use only the features, not the Depression column
+    X = X_features_sampled.values
 
     # Scale the data
     scaler = StandardScaler()
@@ -246,7 +286,7 @@ if __name__ == "__main__":
     # Get the cluster assignments
     cluster_labels = final_kmedoids.labels
 
-    # Add the cluster labels to the original dataframe
+    # Add the cluster labels to the original dataframe (which still contains the Depression column)
     df_sampled['cluster'] = cluster_labels
 
     # Count samples in each cluster
@@ -256,7 +296,7 @@ if __name__ == "__main__":
         print(f"Cluster {cluster_id}: {count} samples")
 
     # Save results to csv
-    df_sampled.to_csv('clustering_results.csv', index=False)
+    df_sampled.to_csv('clustering_results_500.csv', index=False)
     print("Results saved to 'clustering_results.csv'")
 
     # Visualize the clusters in 2D space (PCA)
@@ -285,5 +325,5 @@ if __name__ == "__main__":
     plt.legend()
     plt.grid(True)
     plt.tight_layout(rect=[0, 0.08, 1, 0.98])  # Adjust layout to make room for metrics text
-    plt.savefig('kmedoids_clustering_pca.png', bbox_inches='tight')
+    plt.savefig('kmedoids_clustering_pca_500.png', bbox_inches='tight')
     print("PCA clustering visualization with metrics saved to 'kmedoids_clustering_pca.png'")
